@@ -1,11 +1,13 @@
 package com.example.myapplication;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.provider.MediaStore;
 import android.util.Log;
 import android.widget.Button;
 import android.widget.Toast;
@@ -36,6 +38,7 @@ public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "VideoRecord";
     private static final int REQUEST_CODE_PERMISSIONS = 10;
+    private static final int REQUEST_CODE_GALLERY = 20;
     private static final String[] REQUIRED_PERMISSIONS;
 
     static {
@@ -58,6 +61,7 @@ public class MainActivity extends AppCompatActivity {
 
     private androidx.camera.view.PreviewView previewView;
     private Button buttonRecord;
+    private Button buttonGallery;
     private VideoCapture<Recorder> videoCapture;
     private Recording recording;
     private ExecutorService cameraExecutor;
@@ -71,6 +75,7 @@ public class MainActivity extends AppCompatActivity {
 
         previewView = findViewById(R.id.previewView);
         buttonRecord = findViewById(R.id.buttonRecord);
+        buttonGallery = findViewById(R.id.buttonGallery);
         videoView = findViewById(R.id.videoView);
 
         if (allPermissionsGranted()) {
@@ -89,8 +94,27 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        buttonGallery.setOnClickListener(v -> openGallery());
+
         outputDirectory = getOutputDirectory();
         cameraExecutor = Executors.newSingleThreadExecutor();
+    }
+
+    private void openGallery() {
+        Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Video.Media.EXTERNAL_CONTENT_URI);
+        startActivityForResult(intent, REQUEST_CODE_GALLERY);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_CODE_GALLERY && resultCode == RESULT_OK && data != null) {
+            Uri selectedVideoUri = data.getData();
+            if (selectedVideoUri != null) {
+                videoView.setVideoURI(selectedVideoUri);
+                videoView.start();
+            }
+        }
     }
 
     private void requestPermissions() {
@@ -186,8 +210,6 @@ public class MainActivity extends AppCompatActivity {
                 startCamera();
             } else {
                 Toast.makeText(this, "Разрешения не предоставлены", Toast.LENGTH_SHORT).show();
-                // Не завершаем приложение, а просто показываем предупреждение
-                // finish();
             }
         }
     }
